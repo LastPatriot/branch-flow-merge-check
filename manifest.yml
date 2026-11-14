@@ -3,7 +3,8 @@ modules:
     - key: git-branching-strategy-validator
       function: validateBranchFlow
       name: Git Branching Strategy Validator
-      description: Blocks pull requests whose source and target branches break the team branching strategy.
+      description: Blocks pull requests whose source and target branches break the
+        team branching strategy.
       triggers:
         # Shows the result on the PR as soon as commits are pushed.
         - on-code-pushed
@@ -12,7 +13,8 @@ modules:
     - key: sensitive-config-file-check
       function: validateConfigFiles
       name: Sensitive Config File Check
-      description: Blocks pull requests that add or change .env, appsettings.json or Spring Boot base config files.
+      description: Blocks pull requests that add or change .env, appsettings.json or
+        Spring Boot base config files.
       triggers:
         - on-code-pushed
         - on-merge
@@ -20,11 +22,10 @@ modules:
     - key: auto-merge-on-approval
       function: autoMergeOnApproval
       # Fires when a reviewer approves, requests changes, or has their status cleared.
+      # No ignoreSelf filter: Forge only supports it for Jira events. The app never changes a
+      # reviewer status, and the handler also skips self-generated events.
       events:
         - avi:bitbucket:updated:pullrequest-reviewer-status
-      filter:
-        # Don't react to events caused by the app itself.
-        ignoreSelf: true
     - key: release-notes-on-merge
       function: generateReleaseNotes
       # Fires when a pull request is merged. No ignoreSelf: PRs merged by auto-merge need notes too.
@@ -49,5 +50,4 @@ permissions:
 app:
   runtime:
     name: nodejs22.x
-  # Filled in by `forge register`.
-  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  id: ari:cloud:ecosystem::app/2c87eb65-c218-45e6-8b8d-8b52212f3757

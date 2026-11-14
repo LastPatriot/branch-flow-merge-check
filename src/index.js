@@ -52,6 +52,10 @@ export const validateBranchFlow = async (event) => {
 // Configure with a Forge environment variable:
 //   AUTO_MERGE_TARGETS  comma-separated target branches; `vN/*` = any version line (default dev,test,prod,vN/*)
 export const autoMergeOnApproval = async (event) => {
+  if (event.selfGenerated) {
+    console.log('auto-merge: event caused by this app; skipping');
+    return;
+  }
   const prId = event.pullrequest?.id;
   const workspaceUuid = event.workspace?.uuid;
   const repoUuid = event.repository?.uuid;
