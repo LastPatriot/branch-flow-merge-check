@@ -9,6 +9,13 @@ modules:
         - on-code-pushed
         # Re-checks at the merge button (also catches a PR whose target was changed later).
         - on-merge
+    - key: sensitive-config-file-check
+      function: validateConfigFiles
+      name: Sensitive Config File Check
+      description: Blocks pull requests that add or change .env, appsettings.json or Spring Boot base config files.
+      triggers:
+        - on-code-pushed
+        - on-merge
   trigger:
     - key: auto-merge-on-approval
       function: autoMergeOnApproval
@@ -18,16 +25,27 @@ modules:
       filter:
         # Don't react to events caused by the app itself.
         ignoreSelf: true
+    - key: release-notes-on-merge
+      function: generateReleaseNotes
+      # Fires when a pull request is merged. No ignoreSelf: PRs merged by auto-merge need notes too.
+      events:
+        - avi:bitbucket:fulfilled:pullrequest
   function:
     - key: validateBranchFlow
       handler: index.validateBranchFlow
     - key: autoMergeOnApproval
       handler: index.autoMergeOnApproval
+    - key: validateConfigFiles
+      handler: index.validateConfigFiles
+    - key: generateReleaseNotes
+      handler: index.generateReleaseNotes
 permissions:
   scopes:
     - read:pullrequest:bitbucket
-    # Needed to merge pull requests (auto-merge).
+    # Needed to merge pull requests (auto-merge) and post release-note comments.
     - write:pullrequest:bitbucket
+    # Needed to read a pull request's changed files (diffstat) and commits.
+    - read:repository:bitbucket
 app:
   runtime:
     name: nodejs22.x

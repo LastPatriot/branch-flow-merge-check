@@ -1,6 +1,14 @@
 import { checkBranchFlow } from './rules.js';
 import { decideAutoMerge } from './automerge.js';
-import { getPullRequest, mergePullRequest } from './bitbucket.js';
+import { configScanResult } from './configscan.js';
+import { buildReleaseNotes, notesTargetAllowed } from './releasenotes.js';
+import {
+  addPullRequestComment,
+  getPullRequest,
+  getPullRequestCommits,
+  getPullRequestDiffstat,
+  mergePullRequest,
+} from './bitbucket.js';
 
 // Merge check (bitbucket:mergeCheck).
 //
@@ -73,5 +81,82 @@ export const autoMergeOnApproval = async (event) => {
     // Expected until the branch's approval minimums (including default reviewers) are met.
     // Other causes: required builds not passed yet, another branch restriction, or a failed merge check.
     console.log(`auto-merge: PR #${prId} not merged yet, Bitbucket refused (HTTP ${merged.status}): ${merged.body}`);
+  }
+};
+
+// Merge check (bitbucket:mergeCheck): Sensitive Config File Check.
+//
+// Reads the files the PR adds, changes or renames (diffstat) and blocks .env variants,
+// appsettings.json and Spring Boot base config files. See src/configscan.js for the rules.
+export const validateConfigFiles = async (event) => {
+  const prId = event.pullrequest.id;
+  const res = await getPullRequestDiffstat(event.workspace.uuid, event.repository.uuid, prId);
+
+  if (!res.ok) {
+    // Fail closed, like the branch check.
+    return {
+      success: false,
+      message: `Could not read the changed files of pull request #${prId} (HTTP ${res.status}). Re-run the check or contact platform engineering.`,
+    };
+  }
+  if (res.values.truncated) {
+    return {
+      success: false,
+      message: `Pull request #${prId} changes too many files to scan completely. Split it into smaller pull requests.`,
+    };
+  }
+
+  return configScanResult(res.values);
+};
+
+// Release notes trigger (avi:bitbucket:fulfilled:pullrequest).
+//
+// When a PR is merged into a release branch, posts release notes built from its commits as a
+// comment on that PR. Configure with a Forge environment variable:
+//   RELEASE_NOTES_TARGETS  comma-separated target branches (default test,prod)
+export const generateReleaseNotes = async (event) => {
+  const prId = event.pullrequest?.id;
+  const workspaceUuid = event.workspace?.uuid;
+  const repoUuid = event.repository?.uuid;
+  if (!prId || !workspaceUuid || !repoUuid) {
+    console.log('release-notes: event has no pull request, workspace or repository id; skipping');
+    return;
+  }
+
+  const res = await getPullRequest(workspaceUuid, repoUuid, prId);
+  if (!res.ok) {
+    console.error(`release-notes: could not read PR #${prId} (HTTP ${res.status})`);
+    return;
+  }
+  const pr = res.pr;
+  const source = pr.source?.branch?.name;
+  const target = pr.destination?.branch?.name;
+  if (pr.state !== 'MERGED' || !target || !notesTargetAllowed(target, process.env.RELEASE_NOTES_TARGETS)) {
+    console.log(`release-notes: PR #${prId} (${source} -> ${target}, ${pr.state}) needs no release notes`);
+    return;
+  }
+
+  const commits = await getPullRequestCommits(workspaceUuid, repoUuid, prId);
+  if (!commits.ok) {
+    console.error(`release-notes: could not read commits of PR #${prId} (HTTP ${commits.status})`);
+    return;
+  }
+
+  const notes = buildReleaseNotes(
+    {
+      id: prId,
+      title: pr.title,
+      source,
+      target,
+      mergeCommit: pr.merge_commit?.hash,
+      mergedAt: pr.updated_on,
+    },
+    commits.values
+  );
+  const posted = await addPullRequestComment(workspaceUuid, repoUuid, prId, notes);
+  if (posted.ok) {
+    console.log(`release-notes: posted on PR #${prId} (${source} -> ${target})`);
+  } else {
+    console.error(`release-notes: could not comment on PR #${prId} (HTTP ${posted.status})`);
   }
 };
