@@ -1,0 +1,35 @@
+modules:
+  bitbucket:mergeCheck:
+    - key: git-branching-strategy-validator
+      function: validateBranchFlow
+      name: Git Branching Strategy Validator
+      description: Blocks pull requests whose source and target branches break the team branching strategy.
+      triggers:
+        # Shows the result on the PR as soon as commits are pushed.
+        - on-code-pushed
+        # Re-checks at the merge button (also catches a PR whose target was changed later).
+        - on-merge
+  trigger:
+    - key: auto-merge-on-approval
+      function: autoMergeOnApproval
+      # Fires when a reviewer approves, requests changes, or has their status cleared.
+      events:
+        - avi:bitbucket:updated:pullrequest-reviewer-status
+      filter:
+        # Don't react to events caused by the app itself.
+        ignoreSelf: true
+  function:
+    - key: validateBranchFlow
+      handler: index.validateBranchFlow
+    - key: autoMergeOnApproval
+      handler: index.autoMergeOnApproval
+permissions:
+  scopes:
+    - read:pullrequest:bitbucket
+    # Needed to merge pull requests (auto-merge).
+    - write:pullrequest:bitbucket
+app:
+  runtime:
+    name: nodejs22.x
+  # Filled in by `forge register`.
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
