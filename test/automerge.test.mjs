@@ -44,7 +44,7 @@ test('does not merge when anyone requested changes', () => {
 });
 
 test('does not merge a PR that breaks the branch flow', () => {
-  const d = decideAutoMerge(pr(branches('feature/x', 'dev')));
+  const d = decideAutoMerge(pr(branches('chore/x', 'dev')));
   assert.equal(d.merge, false);
   assert.match(d.reason, /Rule 2/);
 });

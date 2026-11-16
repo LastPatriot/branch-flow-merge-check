@@ -1,7 +1,7 @@
 // Team branching strategy. Pure function: no Forge or network code, so it can be tested directly.
 //
 //   Rule 1: vN/*                    may NOT merge into dev, test or prod
-//   Rule 2: only fix/*              may merge into dev
+//   Rule 2: only fix/* or feature/* may merge into dev
 //   Rule 3: only dev                may merge into test
 //   Rule 4: only test or hotfix/*   may merge into prod
 //   Rule 5: only feature/*          may merge into vN/*
@@ -11,6 +11,7 @@
 // Any other target branch is not restricted by this check.
 
 const PROTECTED_TARGETS = ['dev', 'test', 'prod'];
+const DEV_SOURCES = ['fix/', 'feature/'];
 const VERSION_LINE = /^v\d+\//;
 
 export const isVersionLine = (branch) => VERSION_LINE.test(branch);
@@ -29,10 +30,10 @@ export function checkBranchFlow(sourceBranch, targetBranch) {
   }
 
   // Rule 2
-  if (targetBranch === 'dev' && !sourceBranch.startsWith('fix/')) {
+  if (targetBranch === 'dev' && !DEV_SOURCES.some((prefix) => sourceBranch.startsWith(prefix))) {
     return {
       success: false,
-      message: `Rule 2: only fix/* branches can merge into dev (${flow}).`,
+      message: `Rule 2: only fix/* or feature/* branches can merge into dev (${flow}).`,
     };
   }
 

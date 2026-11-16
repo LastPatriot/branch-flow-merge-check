@@ -4,6 +4,7 @@ import { checkBranchFlow, SUCCESS_MESSAGE } from '../src/rules.js';
 
 const allowed = [
   ['fix/fee-rounding', 'dev'],
+  ['feature/login', 'dev'],               // features for the current version
   ['dev', 'test'],
   ['test', 'prod'],
   ['hotfix/v2.0.1', 'prod'],
@@ -21,8 +22,9 @@ const blocked = [
   ['v3/main', 'prod', 'Rule 1'],
   ['v2/main', 'dev', 'Rule 1'],
   ['v10/payments', 'test', 'Rule 1'],
-  ['feature/login', 'dev', 'Rule 2'],
   ['hotfix/x', 'dev', 'Rule 2'],
+  ['chore/deps', 'dev', 'Rule 2'],
+  ['featurex', 'dev', 'Rule 2'],          // needs the feature/ prefix
   ['fix/x', 'test', 'Rule 3'],
   ['feature/x', 'test', 'Rule 3'],
   ['dev', 'prod', 'Rule 4'],
