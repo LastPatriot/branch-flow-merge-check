@@ -18,6 +18,15 @@ modules:
       triggers:
         - on-code-pushed
         - on-merge
+    - key: branch-limit-check
+      function: validateBranchLimit
+      name: Branch Limit Check
+      description: Blocks pull requests while the repository has more than the allowed
+        number of branches (default 8, set with MAX_BRANCHES).
+      triggers:
+        - on-code-pushed
+        # Re-counts at the merge button, so branches created after the last push are caught.
+        - on-merge
   trigger:
     - key: auto-merge-on-approval
       function: autoMergeOnApproval
@@ -40,6 +49,8 @@ modules:
       handler: index.validateConfigFiles
     - key: generateReleaseNotes
       handler: index.generateReleaseNotes
+    - key: validateBranchLimit
+      handler: index.validateBranchLimit
 permissions:
   scopes:
     - read:pullrequest:bitbucket

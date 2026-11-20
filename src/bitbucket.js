@@ -49,6 +49,15 @@ export function getPullRequestCommits(workspaceUuid, repoUuid, prId) {
   );
 }
 
+// Branches in the repository (only their names are requested).
+export function getBranches(workspaceUuid, repoUuid) {
+  return getAllPages((page) =>
+    page
+      ? route`/2.0/repositories/${workspaceUuid}/${repoUuid}/refs/branches?pagelen=100&fields=values.name,next&page=${page}`
+      : route`/2.0/repositories/${workspaceUuid}/${repoUuid}/refs/branches?pagelen=100&fields=values.name,next`
+  );
+}
+
 // Posts a Markdown comment on the pull request.
 export async function addPullRequestComment(workspaceUuid, repoUuid, prId, markdown) {
   const res = await api

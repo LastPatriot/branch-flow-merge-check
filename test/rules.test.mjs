@@ -25,6 +25,9 @@ const blocked = [
   ['hotfix/x', 'dev', 'Rule 2'],
   ['chore/deps', 'dev', 'Rule 2'],
   ['featurex', 'dev', 'Rule 2'],          // needs the feature/ prefix
+  ['prod', 'dev', 'Rule 2'],              // no back-merging down the promotion chain
+  ['test', 'dev', 'Rule 2'],
+  ['prod', 'test', 'Rule 3'],
   ['fix/x', 'test', 'Rule 3'],
   ['feature/x', 'test', 'Rule 3'],
   ['dev', 'prod', 'Rule 4'],

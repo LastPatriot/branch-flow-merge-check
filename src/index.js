@@ -2,8 +2,10 @@ import { checkBranchFlow } from './rules.js';
 import { decideAutoMerge } from './automerge.js';
 import { configScanResult } from './configscan.js';
 import { buildReleaseNotes, notesTargetAllowed } from './releasenotes.js';
+import { branchLimitResult, parseMaxBranches } from './branchlimit.js';
 import {
   addPullRequestComment,
+  getBranches,
   getPullRequest,
   getPullRequestCommits,
   getPullRequestDiffstat,
@@ -111,6 +113,51 @@ export const validateConfigFiles = async (event) => {
   }
 
   return configScanResult(res.values);
+};
+
+// Merge check (bitbucket:mergeCheck): Branch Limit Check.
+//
+// Blocks the PR while the repository has more branches than MAX_BRANCHES (default 8).
+// See src/branchlimit.js for the rules.
+export const validateBranchLimit = async (event) => {
+  const prId = event.pullrequest.id;
+  const workspaceUuid = event.workspace.uuid;
+  const repoUuid = event.repository.uuid;
+  const max = parseMaxBranches(process.env.MAX_BRANCHES);
+
+  const [prRes, branchRes] = await Promise.all([
+    getPullRequest(workspaceUuid, repoUuid, prId),
+    getBranches(workspaceUuid, repoUuid),
+  ]);
+
+  // Fail closed, like the other checks.
+  if (!prRes.ok) {
+    return {
+      success: false,
+      message: `Could not read pull request #${prId} to check the branch limit (HTTP ${prRes.status}). Re-run the check or contact platform engineering.`,
+    };
+  }
+  if (!branchRes.ok) {
+    return {
+      success: false,
+      message: `Could not list the repository's branches (HTTP ${branchRes.status}). Re-run the check or contact platform engineering.`,
+    };
+  }
+  if (branchRes.values.truncated) {
+    return {
+      success: false,
+      message: `Repository has thousands of branches, far more than the limit of ${max}. Delete stale branches before merging.`,
+    };
+  }
+
+  return branchLimitResult(
+    branchRes.values.map((b) => b.name),
+    {
+      max,
+      sourceBranch: prRes.pr.source?.branch?.name,
+      closesSourceBranch: prRes.pr.close_source_branch === true,
+    }
+  );
 };
 
 // Release notes trigger (avi:bitbucket:fulfilled:pullrequest).
